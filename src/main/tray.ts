@@ -69,16 +69,16 @@ function nativeImageToPixmap(image: NativeImage): Promise<Buffer> {
             pixmap.writeUInt32LE(height, 4);
 
             for (let i = 0; i < bitmap.length; i += 4) {
-                const r = bitmap[i];
+                const b = bitmap[i];
                 const g = bitmap[i + 1];
-                const b = bitmap[i + 2];
+                const r = bitmap[i + 2];
                 const a = bitmap[i + 3];
 
                 const o = 8 + i;
                 pixmap[o] = a;
-                pixmap[o + 1] = ((b * a + 127) * 257) >>> 16;
+                pixmap[o + 1] = ((r * a + 127) * 257) >>> 16;
                 pixmap[o + 2] = ((g * a + 127) * 257) >>> 16;
-                pixmap[o + 3] = ((r * a + 127) * 257) >>> 16;
+                pixmap[o + 3] = ((b * a + 127) * 257) >>> 16;
             }
 
             resolve(pixmap);
