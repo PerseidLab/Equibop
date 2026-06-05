@@ -78,7 +78,13 @@ function init() {
                 if (eqIndex !== -1) {
                     const key = cleanArg.slice(2, eqIndex);
                     const value = cleanArg.slice(eqIndex + 1);
-                    app.commandLine.appendSwitch(key, value);
+                    if (key === "enable-features") {
+                        value.split(",").forEach(feature => enabledFeatures.add(feature));
+                    } else if (key === "disable-features") {
+                        value.split(",").forEach(feature => disabledFeatures.add(feature));
+                    } else {
+                        app.commandLine.appendSwitch(key, value);
+                    }
                 } else {
                     app.commandLine.appendSwitch(cleanArg.slice(2));
                 }
