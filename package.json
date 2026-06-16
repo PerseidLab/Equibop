@@ -89,7 +89,7 @@
             ]
         },
         "beforePack": "scripts/build/beforePack.mjs",
-        "afterPack": "scripts/build/afterPack.mjs",
+        "afterPack": "scripts/build/afterPack2.mjs",
         "linux": {
             "icon": "build/icon.svg",
             "category": "Network",
