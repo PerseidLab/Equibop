@@ -1,0 +1,105 @@
+name: Repack Equibop Appimage
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Latest Equibop Release URL
+        id: equibop-url
+        run: |
+          # Query GitHub API and dynamically extract the 64-bit Linux AppImage asset
+          URL=$(curl -s https://api.github.com/repos/Equicord/Equibop/releases/latest \
+            | jq -r '.assets[].browser_download_url' \
+            | grep -i "AppImage" \
+            | grep -i -E "x86_64|x64|amd64" \
+            | head -n 1)
+
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "Fallback: Trying broader AppImage search..."
+            URL=$(curl -s https://api.github.com/repos/Equicord/Equibop/releases/latest \
+              | jq -r '.assets[].browser_download_url' \
+              | grep -i "AppImage" \
+              | grep -v -i "arm64" \
+              | head -n 1)
+          fi
+
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "Error: Could not find any valid Linux AppImage asset in the latest release."
+            exit 1
+          fi
+
+          echo "Found URL: $URL"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Download Equibop AppImage
+        run: |
+          wget -O Equibop.AppImage "${{ steps.equibop-url.outputs.url }}"
+          chmod +x Equibop.AppImage
+
+      - name: Extract AppImage
+        run: |
+          ./Equibop.AppImage --appimage-extract
+          # This creates the 'squashfs-root' directory structure
+
+      - name: Download and Embed discord-rpc-bridge
+        run: |
+          # Ensure the destination directory exists inside the extracted structure
+          mkdir -p squashfs-root/usr/bin/
+
+          # Fetch the bridge binary directly into the destination
+          wget -O squashfs-root/usr/bin/discord-rpc-bridge "https://github.com/barrettotte/discord-rpc-bridge/releases/download/v0.1.2/discord-rpc-bridge"
+          chmod +x squashfs-root/usr/bin/discord-rpc-bridge
+
+      - name: Inject Hook into AppRun Execution File
+        run: |
+          # Insert background bridge execution logic directly after the shebang line in AppRun
+          sed -i '2i \
+          # --- Injected Service ---\n\
+          usr/bin/discord-rpc-bridge &\n\
+          BRIDGE_PID=$!\n\
+          \n\
+          # Enforce cleanup trap handling upon termination\n\
+          trap '\''kill $BRIDGE_PID'\'' EXIT INT TERM\n\
+          # ------------------------\n' squashfs-root/AppRun
+
+      - name: Set up appimagetool
+        run: |
+          # Download from official stable continuous build link to prevent 404 errors
+          wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          # Required environment variable to tell appimagetool which arch it's building for
+          echo "ARCH=x86_64" >> $GITHUB_ENV
+
+      - name: Repack Modified AppImage
+        run: |
+          # Run via extract-and-run to bypass FUSE requirements inside GitHub runners
+          ./appimagetool --appimage-extract-and-run squashfs-root Equibop-x86_64.AppImage
+
+      - name: Upload Repacked AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Equibop-AppImage
+          path: Equibop-x86_64.AppImage
+          retention-days: 7
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Equibop v1.0.${{ github.run_number }}
+          body: |
+
+            * Integrated **[discord-rpc-bridge](https://github.com/barrettotte/discord-rpc-bridge)** to handle Discord Rich Presence.
+          draft: false
+          prerelease: false
+          files: |
+            Equibop-x86_64.AppImage
