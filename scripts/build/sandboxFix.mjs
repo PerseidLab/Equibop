@@ -57,7 +57,11 @@ if [[ "$SteamOS" == "1" && "$SteamGamepadUI" == "1" ]]; then
 fi
 
 if [ -x "$SCRIPT_DIR/discord-rpc-bridge" ]; then
-    "$SCRIPT_DIR/discord-rpc-bridge" &
+    if pgrep -x "discord-rpc-bridge" > /dev/null; then
+        echo "discord-rpc-bridge is already running, skipping launch."
+    else
+        "$SCRIPT_DIR/discord-rpc-bridge" &
+    fi
 fi
 
 exec "$SCRIPT_DIR/${this.packager.executableName}.bin" "$([ "$IS_STEAMOS" == 1 ] && echo '--no-sandbox')" "$@"
