@@ -56,12 +56,14 @@ if [[ "$SteamOS" == "1" && "$SteamGamepadUI" == "1" ]]; then
     IS_STEAMOS=1
 fi
 
+echo "Cleaning up old instances..."
+pkill -f "discord-rpc-bridge" 2>/dev/null
+pkill -f "Equibop.*\.AppImage" 2>/dev/null
+
+sleep 0.5
+
 if [ -x "$SCRIPT_DIR/discord-rpc-bridge" ]; then
-    if pgrep -x "discord-rpc-bridge" > /dev/null; then
-        echo "discord-rpc-bridge is already running, skipping launch."
-    else
-        "$SCRIPT_DIR/discord-rpc-bridge" &
-    fi
+    "$SCRIPT_DIR/discord-rpc-bridge" &
 fi
 
 exec "$SCRIPT_DIR/${this.packager.executableName}.bin" "$([ "$IS_STEAMOS" == 1 ] && echo '--no-sandbox')" "$@"
