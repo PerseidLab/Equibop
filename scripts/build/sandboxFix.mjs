@@ -56,6 +56,10 @@ if [[ "$SteamOS" == "1" && "$SteamGamepadUI" == "1" ]]; then
     IS_STEAMOS=1
 fi
 
+if [ -x "$SCRIPT_DIR/discord-rpc-bridge" ]; then
+    "$SCRIPT_DIR/discord-rpc-bridge" &
+fi
+
 exec "$SCRIPT_DIR/${this.packager.executableName}.bin" "$([ "$IS_STEAMOS" == 1 ] && echo '--no-sandbox')" "$@"
                 `.trim();
 
