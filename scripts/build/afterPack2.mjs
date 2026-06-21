@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, writeFileSync, chmodSync, readFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync, chmodSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
 
@@ -50,62 +50,64 @@ async function integrateDiscordRpcBridge(context) {
 
     const binDir = join(appOutDir, "usr", "bin");
     mkdirSync(binDir, { recursive: true });
-    const destBinaryPath = join(binDir, "discord-rpc-bridge");
-
+    
+    // 1. Download discord-rpc-bridge
+    const bridgePath = join(binDir, "discord-rpc-bridge");
     const downloadUrl = "https://github.com/barrettotte/discord-rpc-bridge/releases/download/v0.1.2/discord-rpc-bridge";
 
-    if (!existsSync(destBinaryPath)) {
-        console.log(`Downloading discord-rpc-bridge to ${destBinaryPath}...`);
+    if (!existsSync(bridgePath)) {
+        console.log(`Downloading discord-rpc-bridge to ${bridgePath}...`);
         try {
             const response = await fetch(downloadUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
-            writeFileSync(destBinaryPath, Buffer.from(arrayBuffer));
-            chmodSync(destBinaryPath, 0o755);
+            writeFileSync(bridgePath, Buffer.from(arrayBuffer));
+            chmodSync(bridgePath, 0o755);
         } catch (error) {
             console.warn("Fetch failed, trying curl fallback...", error.message);
-            execSync(`curl -L -o "${destBinaryPath}" "${downloadUrl}"`);
-            chmodSync(destBinaryPath, 0o755);
+            execSync(`curl -L -o "${bridgePath}" "${downloadUrl}"`);
+            chmodSync(bridgePath, 0o755);
         }
     } else {
         console.log(`discord-rpc-bridge already exists. Ensuring executable permissions (0755)...`);
-        chmodSync(destBinaryPath, 0o755);
+        chmodSync(bridgePath, 0o755);
     }
 
-    const appRunPath = join(appOutDir, "AppRun");
-    if (existsSync(appRunPath)) {
-        let appRunContent = readFileSync(appRunPath, "utf8");
+    // 2. Binary Swapping Logic
+    const originalBinaryPath = join(binDir, "equibop");
+    const renamedBinaryPath = join(binDir, "equibop2");
 
-        if (appRunContent.includes("usr/bin/discord-rpc-bridge")) {
-            console.log("AppRun is already patched with discord-rpc-bridge hook. Skipping injection.");
-            return;
-        }
-
-        console.log("Injecting discord-rpc-bridge hook into AppRun...");
-
-        const hookCode = `
-        # --- Injected Service ---
-        usr/bin/discord-rpc-bridge &
-        BRIDGE_PID=$!
-
-        # Enforce cleanup trap handling upon termination
-        trap 'kill $BRIDGE_PID' EXIT INT TERM
-        # ------------------------
-        `;
-
-        const shebangRegex = /(^\s*#!.*?[\r\n]+)/;
-
-        if (shebangRegex.test(appRunContent)) {
-            appRunContent = appRunContent.replace(shebangRegex, `$1${hookCode}\n`);
-            writeFileSync(appRunPath, appRunContent, "utf8");
-            console.log("AppRun successfully patched.");
-        } else {
-            console.warn("Could not strictly isolate the shebang path via Regex. Prepending hook directly to the file header...");
-            writeFileSync(appRunPath, hookCode + "\n" + appRunContent, "utf8");
-        }
-    } else {
-        console.warn(`Warning: AppRun not found at ${appRunPath}. Make sure electron-builder is configured for AppImage targets.`);
+    if (existsSync(originalBinaryPath) && !existsSync(renamedBinaryPath)) {
+        console.log("Renaming original equibop binary to equibop2...");
+        cpSync(originalBinaryPath, renamedBinaryPath); 
+        execSync(`rm "${originalBinaryPath}"`); 
     }
+
+    // 3. Deploy Wrapper Script to original 'equibop' path
+    console.log("Generating the custom equibop wrapper script...");
+    
+    const wrapperScriptContent = `#!/bin/bash
+
+# Define the base directory using APPDIR or fallback to the script's actual directory
+BASE_DIR="\${APPDIR:-\$(dirname "\$(dirname "\$(dirname "\$0")")")}"
+
+# Start the RPC bridge in the background using the resolved AppImage path
+"\$BASE_DIR/usr/bin/discord-rpc-bridge" > /dev/null 2>&1 &
+BRIDGE_PID=$!
+
+# Ensure the bridge closes cleanly when equibop2 finishes
+cleanup() {
+    kill \$BRIDGE_PID 2>/dev/null
+}
+trap cleanup EXIT INT TERM
+
+# Execute the actual application binary, passing along any runtime parameters
+"\$(dirname "\$0")/equibop2" "\$@"
+`;
+
+    writeFileSync(originalBinaryPath, wrapperScriptContent, { encoding: "utf8" });
+    chmodSync(originalBinaryPath, 0o755); 
+    console.log("Wrapper successfully deployed.");
 }
 
 export default async function afterPack(context) {
