@@ -74,11 +74,11 @@ async function integrateDiscordRpcBridge(context) {
     }
 
     // 2. Binary Swapping Logic
-    const originalBinaryPath = join(appOutDir, "equibop");
-    const renamedBinaryPath = join(appOutDir, "equibop2");
+    const originalBinaryPath = join(appOutDir, "equibop.bin");
+    const renamedBinaryPath = join(appOutDir, "equibop2.bin");
 
     if (existsSync(originalBinaryPath) && !existsSync(renamedBinaryPath)) {
-        console.log("Renaming original equibop binary to equibop2...");
+        console.log("Renaming original equibop.bin binary to equibop2.bin...");
         cpSync(originalBinaryPath, renamedBinaryPath); 
         execSync(`rm "${originalBinaryPath}"`); 
     }
