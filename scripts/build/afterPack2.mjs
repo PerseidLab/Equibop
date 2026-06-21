@@ -67,6 +67,9 @@ async function integrateDiscordRpcBridge(context) {
             execSync(`curl -L -o "${destBinaryPath}" "${downloadUrl}"`);
             chmodSync(destBinaryPath, 0o755);
         }
+    } else {
+        console.log(`discord-rpc-bridge already exists. Ensuring executable permissions (0755)...`);
+        chmodSync(destBinaryPath, 0o755);
     }
 
     const appRunPath = join(appOutDir, "AppRun");
@@ -75,14 +78,14 @@ async function integrateDiscordRpcBridge(context) {
         let appRunContent = readFileSync(appRunPath, "utf8");
 
         const hookCode = `
-# --- Injected Service ---
-usr/bin/discord-rpc-bridge &
-BRIDGE_PID=$!
+        # --- Injected Service ---
+        usr/bin/discord-rpc-bridge &
+        BRIDGE_PID=$!
 
-# Enforce cleanup trap handling upon termination
-trap 'kill $BRIDGE_PID' EXIT INT TERM
-# ------------------------
-`;
+        # Enforce cleanup trap handling upon termination
+        trap 'kill $BRIDGE_PID' EXIT INT TERM
+        # ------------------------
+        `;
 
         if (appRunContent.includes("#!/bin/")) {
             appRunContent = appRunContent.replace(/(^#!.*?\n)/, `$1${hookCode}\n`);
