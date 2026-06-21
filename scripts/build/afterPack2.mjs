@@ -74,8 +74,14 @@ async function integrateDiscordRpcBridge(context) {
 
     const appRunPath = join(appOutDir, "AppRun");
     if (existsSync(appRunPath)) {
-        console.log("Injecting discord-rpc-bridge hook into AppRun...");
         let appRunContent = readFileSync(appRunPath, "utf8");
+
+        if (appRunContent.includes("usr/bin/discord-rpc-bridge")) {
+            console.log("AppRun is already patched with discord-rpc-bridge hook. Skipping injection.");
+            return;
+        }
+
+        console.log("Injecting discord-rpc-bridge hook into AppRun...");
 
         const hookCode = `
         # --- Injected Service ---
@@ -87,12 +93,15 @@ async function integrateDiscordRpcBridge(context) {
         # ------------------------
         `;
 
-        if (appRunContent.includes("#!/bin/")) {
-            appRunContent = appRunContent.replace(/(^#!.*?\n)/, `$1${hookCode}\n`);
+        const shebangRegex = /(^\s*#!.*?[\r\n]+)/;
+
+        if (shebangRegex.test(appRunContent)) {
+            appRunContent = appRunContent.replace(shebangRegex, `$1${hookCode}\n`);
             writeFileSync(appRunPath, appRunContent, "utf8");
             console.log("AppRun successfully patched.");
         } else {
-            console.error("Warning: AppRun file format unexpected. Shebang not found.");
+            console.warn("Could not strictly isolate the shebang path via Regex. Prepending hook directly to the file header...");
+            writeFileSync(appRunPath, hookCode + "\n" + appRunContent, "utf8");
         }
     } else {
         console.warn(`Warning: AppRun not found at ${appRunPath}. Make sure electron-builder is configured for AppImage targets.`);
