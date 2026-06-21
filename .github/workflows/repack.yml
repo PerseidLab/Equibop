@@ -61,14 +61,14 @@ jobs:
 
       - name: Inject Hook into AppRun Execution File
         run: |
-          # Insert background bridge execution logic directly after the shebang line in AppRun
-          # Notice the '\$APPDIR' so GitHub Actions writes it as a literal string!
           sed -i '2i \
           # --- Injected Service ---\n\
+          pkill -f "discord-rpc-bridge" 2>/dev/null\n\
+          sleep 0.2\n\
           "\$APPDIR/usr/bin/discord-rpc-bridge" &\n\
           BRIDGE_PID=\$!\n\
           \n\
-          # Enforce cleanup trap handling upon termination\n\
+
           trap '\''kill \$BRIDGE_PID'\'' EXIT INT TERM\n\
           # ------------------------\n' squashfs-root/AppRun
 
