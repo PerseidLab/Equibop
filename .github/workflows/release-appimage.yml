@@ -1,36 +1,42 @@
-name: Release Appimage
+name: Release
 
 on:
-  push:
-    tags:
-      - v*
-  workflow_dispatch:
+    push:
+        tags:
+            - v*
+    workflow_dispatch:
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+    release:
+        runs-on: ${{ matrix.os }}
 
-    steps:
-      - uses: actions/checkout@v4
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-latest, windows-latest]
+                include:
+                    - os: macos-latest
+                      platform: mac
 
-      - uses: oven-sh/setup-bun@v2
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libglib2.0-dev
+            - name: Install system dependencies
+              if: ${{ matrix.platform == 'linux' }}
+              run: sudo apt-get update && sudo apt-get install -y libglib2.0-dev
 
-      - name: Install dependencies
-        run: bun install
+            - name: Install dependencies
+              run: bun install
 
-      - name: Build
-        run: bun run build
+            - name: Build
+              run: bun run build
 
-      - name: Run Electron Builder
-        run: |
-          bun run electron-builder --linux appimage --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Run Electron Builder
+              if: ${{ matrix.platform != 'mac' }}
+              run: |
+                  bun run electron-builder --${{ matrix.platform }} --publish always
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
