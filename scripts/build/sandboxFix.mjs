@@ -58,7 +58,6 @@ fi
 
 echo "Cleaning up old instances..."
 pkill -f "discord-rpc-bridge" 2>/dev/null
-pkill -f "Equibop.*\.AppImage" 2>/dev/null
 
 sleep 0.5
 
