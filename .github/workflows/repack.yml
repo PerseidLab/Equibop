@@ -68,7 +68,6 @@ jobs:
           "\$APPDIR/usr/bin/discord-rpc-bridge" &\n\
           BRIDGE_PID=\$!\n\
           \n\
-
           trap '\''kill \$BRIDGE_PID'\'' EXIT INT TERM\n\
           # ------------------------\n' squashfs-root/AppRun
 
