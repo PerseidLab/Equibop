@@ -1,5 +1,5 @@
 .vcd-screen-picker-modal {
-    padding: 1em;
+    padding-block: 0.5em;
 }
 
 .vcd-screen-picker-venmic-settings {
@@ -84,6 +84,7 @@
     border: 1px solid var(--primary-800);
     padding: 0.3em;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .vcd-screen-picker-option-radio:first-child {
@@ -128,7 +129,9 @@
 }
 
 .vcd-screen-picker-settings-button-icon {
-    height: 1em;
+    width: 1.25em;
+    height: 1.25em;
+    flex-shrink: 0;
 }
 
 .vcd-screen-picker-audio {

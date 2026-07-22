@@ -731,7 +731,7 @@ function ModalComponent({
     return (
         <Modal
             {...modalProps}
-            size="md"
+            size="lg"
             title="Screen Share Picker"
             onClose={close}
             actions={[
