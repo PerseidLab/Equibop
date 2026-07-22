@@ -153,3 +153,12 @@ app.on("open-url", (_, url) => {
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
 });
+
+app.on("web-contents-created", (_event, contents) => {
+    contents.setWebRTCIPHandlingPolicy(Settings.store.webRTCIPHandlingPolicy ?? "default");
+});
+Settings.addChangeListener("webRTCIPHandlingPolicy", () => {
+    for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.setWebRTCIPHandlingPolicy(Settings.store.webRTCIPHandlingPolicy ?? "default");
+    }
+});
