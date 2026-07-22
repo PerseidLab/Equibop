@@ -2,18 +2,9 @@
     padding: 1em;
 }
 
-.vcd-screen-picker-header-close-button {
-    margin-left: auto;
-}
-
 .vcd-screen-picker-venmic-settings {
     display: grid;
     gap: 8px;
-}
-
-.vcd-screen-picker-footer {
-    display: flex;
-    gap: 1em;
 }
 
 .vcd-screen-picker-card {
